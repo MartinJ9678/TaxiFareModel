@@ -70,7 +70,7 @@ class Trainer(BaseEstimator, TransformerMixin):
         pipe = Pipeline([
                             ('preproc', preproc_pipe),
                             ('linear_model', RandomForestRegressor(n_jobs=-1))
-                        ])
+                        ],memory='../model.joblib')
         return pipe        
 
     def run(self):

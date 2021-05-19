@@ -1,6 +1,7 @@
 from TaxiFareModel.data import BUCKET_NAME
 import os
 from math import sqrt
+from google.cloud import storage
 
 import joblib
 import pandas as pd
@@ -9,11 +10,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 PATH_TO_LOCAL_MODEL = 'model.joblib'
 
-BUCKET_NAME = 'wagon-data-589-jauffret'
-
-BUCKET_TRAIN_DATA_PATH = "trainings_TaxiFare/packages/5071f9087c96099e37cde61cf669969cf2af6d8e28d925a3ccef601a3dd04076/TaxiFareModel-1.0.tar.gz"
-
-PATH_TO_GCP_MODEL = f"gs://{BUCKET_NAME}/{BUCKET_TRAIN_DATA_PATH}"
+#PATH_TO_GCP_MODEL = f"gs://{BUCKET_NAME}/{BUCKET_TRAIN_DATA_PATH}"
 
 AWS_BUCKET_TEST_PATH = "s3://wagon-public-datasets/taxi-fare-test.csv"
 
@@ -63,9 +60,23 @@ def generate_submission_csv(nrows, kaggle_upload=False):
         command = f'kaggle competitions submit -c new-york-city-taxi-fare-prediction -f {name} -m "{kaggle_message_submission}"'
         os.system(command)
 
+BUCKET_NAME = 'wagon-data-589-jauffret'
+
+BUCKET_TRAIN_DATA_PATH = "models_taxi/taxifare/model.joblib"
+
+def get_model_gcp():
+    model_file='model.joblib'
+    client = storage.Client()
+    bucket = client.bucket(BUCKET_NAME)
+    blob = bucket.blob(BUCKET_TRAIN_DATA_PATH)
+    blob.download_to_filename(model_file)
+    model = joblib.load(model_file)
+    return model
 
 if __name__ == '__main__':
 
     # ⚠️ in order to push a submission to kaggle you need to use the WHOLE dataset
     nrows = 100
     generate_submission_csv(nrows, kaggle_upload=False)
+    #model = get_model_gcp()
+    #print(model.get_params())
