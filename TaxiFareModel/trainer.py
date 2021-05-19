@@ -13,6 +13,7 @@ from sklearn.pipeline import Pipeline
 import joblib
 from sklearn.model_selection import GridSearchCV
 from sklearn.ensemble import RandomForestRegressor
+from google.cloud import storage
 
 class Trainer(BaseEstimator, TransformerMixin):
     def __init__(self, X, y):
@@ -26,6 +27,8 @@ class Trainer(BaseEstimator, TransformerMixin):
         self.experiment_name = "[FR] [Paris] [MartinJ9678] taxifare_model 0"
         self.best_model=None
         self.best_params=None
+        self.BUCKET_NAME='wagon-data-589-jauffret'
+        self.STORAGE_LOCATION = "models_taxi/taxifare/"
     
     @memoized_property
     def mlflow_client(self):
@@ -74,9 +77,9 @@ class Trainer(BaseEstimator, TransformerMixin):
         """set and train the pipeline"""
         self.pipeline = self.set_pipeline()
         grid={
-            'linear_model__max_depth':[2,3],
-            'linear_model__min_samples_leaf': [1,2],
-            'linear_model__n_estimators': [100,150,200]
+            'linear_model__max_depth':[2],#,3],
+            'linear_model__min_samples_leaf': [1],#,2],
+            'linear_model__n_estimators': [100],#,150,200]
         }
         grid_search = GridSearchCV(self.pipeline,param_grid=grid,n_jobs=-1,cv=5,scoring='neg_mean_squared_error')
         grid_search.fit(self.X,self.y)
@@ -97,16 +100,30 @@ class Trainer(BaseEstimator, TransformerMixin):
         #     self.mlflow_log_param("truc",model)
         #     for key,value in self.best_params.items():
         #         self.mlflow_log_param(key,value)
+        
         self.mlflow_run()
         self.mlflow_log_metric("rmse",rmse)
-        self.mlflow_log_param("model",self.pipeline.get_params()['linear_model'])
+        self.mlflow_log_param("model",str(self.best_model.get_params()['linear_model'])[:15])
         for key,value in self.best_params.items():
             self.mlflow_log_param(key,value)
         return rmse
     
-    def save_model(self,score,model):
+    def upload_model_to_gcp(self):
+        client = storage.Client()
+        bucket = client.bucket(self.BUCKET_NAME)
+        blob = bucket.blob(f"{self.STORAGE_LOCATION}{str(self.best_model.get_params()['linear_model'])[:15]}")
+        blob.upload_from_filename(f"model.joblib--{str(self.best_model.get_params()['linear_model'])[:15]}-{score}")
+        return self
+    
+    def save_model(self,score):
         """ Save the trained model into a model.joblib file """
-        joblib.dump(self.pipeline, f'model.joblib--{model}-{score}')
+        joblib.dump(model, f"model.joblib--{str(self.best_model.get_params()['linear_model'])[:15]}-{score}")
+        #joblib.dump(model,'model.joblib')
+        print("saved model.joblib locally")
+        
+        # Implement here
+        self.upload_model_to_gcp()
+        print(f"uploaded model.joblib to gcp cloud storage under \n => {self.STORAGE_LOCATION}")
         return self
         
 if __name__ == "__main__":
@@ -124,6 +141,6 @@ if __name__ == "__main__":
     # evaluate
     score = trainer.evaluate(X_val,y_val)
     # joblib
-    model=trainer.pipeline.get_params()['linear_model']
-    trainer.save_model(score,model)
+    model=trainer.best_model
+    trainer.save_model(score)
     print(trainer.best_params)
