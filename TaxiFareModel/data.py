@@ -1,5 +1,7 @@
 import pandas as pd
+from pandas.core.frame import DataFrame
 from sklearn.model_selection import train_test_split
+from TaxiFareModel.utils import df_optimized
 
 AWS_BUCKET_PATH = "s3://wagon-public-datasets/taxi-fare-train.csv"
 BUCKET_NAME ='wagon-data-589-jauffret'
@@ -8,6 +10,7 @@ BUCKET_TRAIN_DATA_PATH='data/train_1k.csv'
 def get_data(nrows=1000):
     '''returns a DataFrame with nrows from s3 bucket'''
     df = pd.read_csv(f"gs://{BUCKET_NAME}/{BUCKET_TRAIN_DATA_PATH}", nrows=nrows)
+    df = df_optimized(df)
     return df
 
 def getXy(df,col_target):

@@ -28,7 +28,7 @@ class Trainer(BaseEstimator, TransformerMixin):
         self.best_model=None
         self.best_params=None
         self.BUCKET_NAME='wagon-data-589-jauffret'
-        self.STORAGE_LOCATION = "models_taxi/taxifare/"
+        self.STORAGE_LOCATION = "models_taxi/taxifare/model.joblib"
     
     @memoized_property
     def mlflow_client(self):
@@ -77,9 +77,9 @@ class Trainer(BaseEstimator, TransformerMixin):
         """set and train the pipeline"""
         self.pipeline = self.set_pipeline()
         grid={
-            'linear_model__max_depth':[2],#,3],
-            'linear_model__min_samples_leaf': [1],#,2],
-            'linear_model__n_estimators': [100],#,150,200]
+            'linear_model__max_depth':[2,3],
+            'linear_model__min_samples_leaf': [1,2],
+            'linear_model__n_estimators': [100,150,200]
         }
         grid_search = GridSearchCV(self.pipeline,param_grid=grid,n_jobs=-1,cv=5,scoring='neg_mean_squared_error')
         grid_search.fit(self.X,self.y)
@@ -103,7 +103,7 @@ class Trainer(BaseEstimator, TransformerMixin):
         
         self.mlflow_run()
         self.mlflow_log_metric("rmse",rmse)
-        self.mlflow_log_param("model",str(self.best_model.get_params()['linear_model'])[:15])
+        self.mlflow_log_param("model",str(self.best_model.get_params()['linear_model'])[:20])
         for key,value in self.best_params.items():
             self.mlflow_log_param(key,value)
         return rmse
@@ -111,13 +111,13 @@ class Trainer(BaseEstimator, TransformerMixin):
     def upload_model_to_gcp(self):
         client = storage.Client()
         bucket = client.bucket(self.BUCKET_NAME)
-        blob = bucket.blob(f"{self.STORAGE_LOCATION}{str(self.best_model.get_params()['linear_model'])[:15]}")
-        blob.upload_from_filename(f"model.joblib--{str(self.best_model.get_params()['linear_model'])[:15]}-{score}")
+        blob = bucket.blob(f"{self.STORAGE_LOCATION}")
+        blob.upload_from_filename(f"model.joblib")
         return self
     
     def save_model(self,score):
         """ Save the trained model into a model.joblib file """
-        joblib.dump(model, f"model.joblib--{str(self.best_model.get_params()['linear_model'])[:15]}-{score}")
+        joblib.dump(model, f"model.joblib")
         #joblib.dump(model,'model.joblib')
         print("saved model.joblib locally")
         
@@ -128,7 +128,7 @@ class Trainer(BaseEstimator, TransformerMixin):
         
 if __name__ == "__main__":
     # get data
-    data = get_data(nrows=10000)
+    data = get_data()
     # clean data
     data = clean_data(data)
     # set X and y

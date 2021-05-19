@@ -1,3 +1,4 @@
+from TaxiFareModel.data import BUCKET_NAME
 import os
 from math import sqrt
 
@@ -7,6 +8,12 @@ import pandas as pd
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 PATH_TO_LOCAL_MODEL = 'model.joblib'
+
+BUCKET_NAME = 'wagon-data-589-jauffret'
+
+BUCKET_TRAIN_DATA_PATH = "trainings_TaxiFare/packages/5071f9087c96099e37cde61cf669969cf2af6d8e28d925a3ccef601a3dd04076/TaxiFareModel-1.0.tar.gz"
+
+PATH_TO_GCP_MODEL = f"gs://{BUCKET_NAME}/{BUCKET_TRAIN_DATA_PATH}"
 
 AWS_BUCKET_TEST_PATH = "s3://wagon-public-datasets/taxi-fare-test.csv"
 
